@@ -1,0 +1,5 @@
+target/
+.scala_dependencies
+lib/
+project/target/
+.idea*
