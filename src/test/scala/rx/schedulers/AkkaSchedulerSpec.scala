@@ -15,28 +15,46 @@
  */
 package rx.schedulers
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestKit
-
 import org.specs2.Specification
 import org.specs2.specification.After
 import org.specs2.time.NoTimeConversions
+import rx.lang.scala.ImplicitFunctionConversions._
+import scala.concurrent.duration._
+import org.specs2.matcher.Matcher
+
 
 class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s2"""$sequential
   ${"Akka actor scheduler for RxJava".title}
 
-  Immediate scheduling a simple task should execute that task immediately ${akka().e1}
+  Immediate scheduling a simple task should execute that task immediately,   ${akka().e1}
+    even when immediately unsubscribing.                                     ${akka().e2}
 """
 
   case class akka() extends TestKit(ActorSystem()) with After {
+    val veryQuickly = 10.milliseconds
 
     val scheduler = new AkkaScheduler(system)
 
-    def e1 = this { todo }
+    def e1 = this {
+      scheduler.schedule (() => testActor ! "ping")
+      testActor should receive(veryQuickly)("ping")
+    }
+
+    def e2 = this {
+      val subscription = scheduler.schedule (() => testActor ! "ping")
+      subscription.unsubscribe()
+      testActor should receive(veryQuickly)("ping")
+    }
 
     override def after: Unit = {
-      scheduler.shutdown
+      scheduler.shutdown()
       TestKit shutdownActorSystem system
+    }
+
+    def receive(patience: Duration): AnyRef => Matcher[ActorRef] = beSome(_) ^^ { (_: ActorRef) =>
+      Option(receiveOne(patience)) // wtf, this thing seriously returns null
     }
   }
 }

@@ -30,6 +30,7 @@ import rx.schedulers.actor.SchedulerActor
 import SchedulerActor._
 
 // TODO make this also work within parent actor context (instead of actor system context)
+// TODO error handling?
 class AkkaScheduler(context: ActorSystem, actorName: Option[String] = None, timeout: FiniteDuration = 1.second) extends Scheduler {
 
   val actor = actorName
