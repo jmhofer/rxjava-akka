@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package rx.schedulers
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
@@ -28,8 +29,14 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
 """
 
   case class akka() extends TestKit(ActorSystem()) with After {
-    def e1 = todo
 
-    override def after: Unit = system.shutdown
+    val scheduler = new AkkaScheduler(system)
+
+    def e1 = this { todo }
+
+    override def after: Unit = {
+      scheduler.shutdown
+      TestKit shutdownActorSystem system
+    }
   }
 }

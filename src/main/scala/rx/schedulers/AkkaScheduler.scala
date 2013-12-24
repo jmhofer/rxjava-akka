@@ -15,26 +15,26 @@
  */
 package rx.schedulers
 
+import akka.actor.{Cancellable, Props, ActorSystem}
+import akka.pattern.ask
+import akka.util.Timeout
 import rx.Scheduler
 import rx.Subscription
 import rx.subscriptions.Subscriptions
-import rx.util.functions.{Action0, Func2}
+import rx.util.functions.Action0
 
-import java.util.concurrent.TimeUnit
-
-import akka.actor._
-import akka.pattern.ask
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import akka.util.Timeout
 
-class AkkaScheduler(context: ActorContext, actorName: Option[String] = None, timeout: FiniteDuration = 1.second) extends Scheduler {
-  type Action[T] = Func2[_ >: rx.Scheduler, _ >: T, _ <: rx.Subscription]
+import rx.schedulers.actor.SchedulerActor
+import SchedulerActor._
 
-  import SchedulerActor._
-  import context.dispatcher
+// TODO make this also work within parent actor context (instead of actor system context)
+class AkkaScheduler(context: ActorSystem, actorName: Option[String] = None, timeout: FiniteDuration = 1.second) extends Scheduler {
 
-  val actor = actorName map (context.actorOf(Props[SchedulerActor], _)) getOrElse context.actorOf(Props[SchedulerActor])
+  val actor = actorName
+    .map (context.actorOf(Props(classOf[SchedulerActor], this), _))
+    .getOrElse (context.actorOf(Props(classOf[SchedulerActor], this)))
 
   def shutdown(): Unit = context stop actor
 
@@ -56,22 +56,9 @@ class AkkaScheduler(context: ActorContext, actorName: Option[String] = None, tim
   }
 
   private def subscriptionFor(cancellable: Future[Cancellable]) = Subscriptions create new Action0 {
-    def call(): Unit = cancellable foreach (_.cancel())
-  }
-
-  private[schedulers] object SchedulerActor {
-    sealed trait Message
-    case class StatefulAction[T](state: T, action: Action[T]) extends Message
-    case class Delayed[T](message: StatefulAction[T], delay: FiniteDuration) extends Message
-    case class Periodic[T](message: StatefulAction[T], initialDelay: FiniteDuration, period: FiniteDuration) extends Message
-    case object Cancel extends Message
-  }
-
-  private[schedulers] class SchedulerActor extends Actor {
-    def receive: Receive = {
-      case StatefulAction(state, action) => action.call(AkkaScheduler.this, state)
-      case Delayed(message, delay) => sender ! context.system.scheduler.scheduleOnce(delay, self, message)
-      case Periodic(message, initialDelay, period) => sender ! context.system.scheduler.schedule(initialDelay, period, self, message)
+    def call(): Unit = {
+      import context.dispatcher
+      cancellable foreach (_.cancel())
     }
   }
 }
