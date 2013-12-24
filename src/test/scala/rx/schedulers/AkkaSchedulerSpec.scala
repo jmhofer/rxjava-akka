@@ -34,10 +34,16 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
 
   Delayed scheduling without delay should execute immediately,               ${akka().e3}
     even when immediately unsubscribing.                                     ${akka().e4}
+
+  Delayed scheduling with a short delay should
+    not execute before that delay,                                           ${akka().e5}
+    execute after that delay,                                                ${akka().e6}
+      but not when immediately unsubscribing.                                ${akka().e7}
 """
 
   case class akka() extends TestKit(ActorSystem()) with After {
     val veryQuickly = 10.milliseconds
+    val quickly = 100.milliseconds
 
     val scheduler = new AkkaScheduler(system, Some("test"))
 
@@ -61,6 +67,23 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
       val subscription = scheduler schedule (() => testActor ! "ping", 0L, TimeUnit.MILLISECONDS)
       subscription.unsubscribe()
       testActor should receive(veryQuickly)("ping")
+    }
+
+    def e5 = this {
+      scheduler schedule (() => testActor ! "ping", 20L, TimeUnit.MILLISECONDS)
+      testActor should not(receive(veryQuickly)("ping"))
+      //testActor should receive(quickly)("ping")
+    }
+
+    def e6 = this {
+      scheduler schedule (() => testActor ! "ping", 20L, TimeUnit.MILLISECONDS)
+      testActor should receive(quickly)("ping")
+    }
+
+    def e7 = this {
+      val subscription = scheduler schedule (() => testActor ! "ping", 20L, TimeUnit.MILLISECONDS)
+      subscription.unsubscribe()
+      testActor should not(receive(quickly)("ping"))
     }
 
     override def after: Unit = {
