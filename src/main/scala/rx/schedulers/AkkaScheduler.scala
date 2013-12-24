@@ -24,10 +24,11 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor._
 import akka.pattern.ask
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration._
 import scala.concurrent.Future
+import akka.util.Timeout
 
-class AkkaScheduler(context: ActorContext, actorName: Option[String] = None) extends Scheduler {
+class AkkaScheduler(context: ActorContext, actorName: Option[String] = None, timeout: FiniteDuration = 1.second) extends Scheduler {
   type Action[T] = Func2[_ >: rx.Scheduler, _ >: T, _ <: rx.Subscription]
 
   import SchedulerActor._
@@ -43,11 +44,13 @@ class AkkaScheduler(context: ActorContext, actorName: Option[String] = None) ext
   }
 
   def schedule[T](state: T, action: Action[T], delayTime: Long, unit: TimeUnit): Subscription = {
+    implicit val timeout0 = Timeout(timeout)
     val cancellable = actor ? Delayed(StatefulAction(state, action), Duration(delayTime, unit))
     subscriptionFor(cancellable.mapTo[Cancellable])
   }
 
   override def schedulePeriodically[T](state: T, action: Action[T], initialDelay: Long, period: Long, unit: TimeUnit): Subscription = {
+    implicit val timeout0 = Timeout(timeout)
     val cancellable = actor ? Periodic[T](StatefulAction[T](state, action), Duration(initialDelay, unit), Duration(period, unit))
     subscriptionFor(cancellable.mapTo[Cancellable])
   }
