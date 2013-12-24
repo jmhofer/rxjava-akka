@@ -24,6 +24,7 @@ import rx.lang.scala.ImplicitFunctionConversions._
 import scala.concurrent.duration._
 import org.specs2.matcher.Matcher
 import java.util.concurrent.TimeUnit
+import rx.Subscription
 
 
 class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s2"""$sequential
@@ -39,60 +40,96 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
     not execute before that delay,                                           ${akka().e5}
     execute after that delay,                                                ${akka().e6}
       but not when immediately unsubscribing.                                ${akka().e7}
+
+  Periodic scheduling should
+    not execute before the initial delay,                                    ${akka().e8}
+    execute after that delay,                                                ${akka().e9}
+      but not when immediately unsubscribing.                                ${akka().e10}
 """
 
-  case class akka() extends TestKit(ActorSystem()) with After {
-    val veryQuickly = 10.milliseconds
-    val quickly = 100.milliseconds
+  case class akka() extends TestKit(ActorSystem()) with After with Scheduling with Immediate with Delayed with Periodic {
+    override def after: Unit = {
+      TestKit shutdownActorSystem system
+    }
+  }
 
-    val scheduler = new AkkaScheduler(system, Some("test"))
-    val pingAction = () => testActor ! "ping"
-
+  trait Immediate { _: Scheduling with TestKit with After =>
     def e1 = this {
-      scheduler schedule pingAction
-      testActor should receive(veryQuickly)("ping")
+      withSubscription(scheduler schedule pingAction) {
+        testActor should receive(veryQuickly)("ping")
+      }
     }
 
     def e2 = this {
-      val subscription = scheduler schedule pingAction
-      subscription.unsubscribe()
+      withSubscription(scheduler schedule pingAction) {}
       testActor should receive(veryQuickly)("ping")
     }
+  }
 
+  trait Delayed { _: Scheduling with TestKit with After =>
     def e3 = this {
-      scheduler schedule (pingAction, 0L, TimeUnit.MILLISECONDS)
-      testActor should receive(veryQuickly)("ping")
+      withSubscription(scheduler schedule (pingAction, 0L, TimeUnit.MILLISECONDS)) {
+        testActor should receive(veryQuickly)("ping")
+      }
     }
 
     def e4 = this {
-      val subscription = scheduler schedule (pingAction, 0L, TimeUnit.MILLISECONDS)
-      subscription.unsubscribe()
+      withSubscription(scheduler schedule (pingAction, 0L, TimeUnit.MILLISECONDS)) {}
       testActor should receive(veryQuickly)("ping")
     }
 
     def e5 = this {
-      scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)
-      testActor should not(receive(veryQuickly)("ping"))
-      //testActor should receive(quickly)("ping")
+      withSubscription(scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)) {
+        testActor should not(receive(veryQuickly)("ping"))
+      }
     }
 
     def e6 = this {
-      scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)
-      testActor should receive(quickly)("ping")
+      withSubscription(scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)) {
+        testActor should receive(quickly)("ping")
+      }
     }
 
     def e7 = this {
-      val subscription = scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)
-      subscription.unsubscribe()
+      withSubscription(scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)) {}
       testActor should not(receive(quickly)("ping"))
     }
+  }
 
-    override def after: Unit = {
-      TestKit shutdownActorSystem system
+  trait Periodic { _: Scheduling with TestKit with After =>
+    def e8 = this {
+      withSubscription(scheduler schedulePeriodically (pingAction, 20L, 1000L, TimeUnit.MILLISECONDS)) {
+        testActor should not(receive(veryQuickly)("ping"))
+      }
     }
+
+    def e9 = this {
+      withSubscription(scheduler schedulePeriodically (pingAction, 20L, 1000L, TimeUnit.MILLISECONDS)) {
+        testActor should receive(quickly)("ping")
+      }
+    }
+
+    def e10 = this {
+      withSubscription(scheduler schedulePeriodically (pingAction, 20L, 1000L, TimeUnit.MILLISECONDS)) {}
+      testActor should not(receive(quickly)("ping"))
+    }
+  }
+
+  trait Scheduling { _: TestKit =>
+    val veryQuickly: FiniteDuration = 10.milliseconds
+    val quickly: FiniteDuration = 100.milliseconds
+
+    val scheduler = new AkkaScheduler(system, Some("test"))
+    val pingAction = () => testActor ! "ping"
 
     def receive(patience: Duration): AnyRef => Matcher[ActorRef] = beSome(_) ^^ { (_: ActorRef) =>
       Option(receiveOne(patience)) // wtf, this thing seriously returns null
+    }
+
+    def withSubscription[T](subscription: Subscription)(op: => T): T = {
+      val t = op
+      subscription.unsubscribe()
+      t
     }
   }
 }
