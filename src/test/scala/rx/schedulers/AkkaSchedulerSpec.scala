@@ -46,42 +46,43 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
     val quickly = 100.milliseconds
 
     val scheduler = new AkkaScheduler(system, Some("test"))
+    val pingAction = () => testActor ! "ping"
 
     def e1 = this {
-      scheduler schedule (testActor ! "ping")
+      scheduler schedule pingAction
       testActor should receive(veryQuickly)("ping")
     }
 
     def e2 = this {
-      val subscription = scheduler schedule (testActor ! "ping")
+      val subscription = scheduler schedule pingAction
       subscription.unsubscribe()
       testActor should receive(veryQuickly)("ping")
     }
 
     def e3 = this {
-      scheduler schedule (() => testActor ! "ping", 0L, TimeUnit.MILLISECONDS)
+      scheduler schedule (pingAction, 0L, TimeUnit.MILLISECONDS)
       testActor should receive(veryQuickly)("ping")
     }
 
     def e4 = this {
-      val subscription = scheduler schedule (() => testActor ! "ping", 0L, TimeUnit.MILLISECONDS)
+      val subscription = scheduler schedule (pingAction, 0L, TimeUnit.MILLISECONDS)
       subscription.unsubscribe()
       testActor should receive(veryQuickly)("ping")
     }
 
     def e5 = this {
-      scheduler schedule (() => testActor ! "ping", 20L, TimeUnit.MILLISECONDS)
+      scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)
       testActor should not(receive(veryQuickly)("ping"))
       //testActor should receive(quickly)("ping")
     }
 
     def e6 = this {
-      scheduler schedule (() => testActor ! "ping", 20L, TimeUnit.MILLISECONDS)
+      scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)
       testActor should receive(quickly)("ping")
     }
 
     def e7 = this {
-      val subscription = scheduler schedule (() => testActor ! "ping", 20L, TimeUnit.MILLISECONDS)
+      val subscription = scheduler schedule (pingAction, 20L, TimeUnit.MILLISECONDS)
       subscription.unsubscribe()
       testActor should not(receive(quickly)("ping"))
     }
