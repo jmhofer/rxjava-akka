@@ -47,8 +47,7 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
     not execute before the initial delay,                                    ${akka().e8}
     execute after that delay,                                                ${akka().e9}
       but not when immediately unsubscribing,                                ${akka().e10}
-    execute repeatedly as expected,                                          ${akka().e11}
-      but not anymore after unsubscribing.                                   ${akka().e12}
+    execute repeatedly as expected, but not anymore after unsubscribing.     ${akka().e11}
 """
 
   case class akka() extends TestKit(ActorSystem()) with After with Scheduling with Immediate with Delayed with Periodic {
@@ -127,8 +126,12 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
       testActor should not(receive(quickly)("ping"))
     }
 
-    def e11 = this { todo }
-    def e12 = this { todo }
+    def e11 = this {
+      withSubscription(scheduler schedulePeriodically (pingAction, 0L, 40L, TimeUnit.MILLISECONDS)) {
+        testActor should receive(quickly)("ping") and
+          (testActor should receive(quickly)("ping"))
+      } and (testActor should not(receive(quickly)("ping")))
+    }
   }
 
   trait Scheduling { _: TestKit =>
