@@ -47,6 +47,61 @@ directly, or the context of another actor (recommended).
 
 The context will act as parent to the created actor. You can supervise it from there in order to handle errors.
 
+### Sample
+
+Here's a simple usage sample application (in Scala, although the scheduler works from Java, too):
+
+```Scala
+import akka.actor.{Props, ActorLogging, Actor, ActorSystem}
+import akka.pattern.ask
+import akka.util.Timeout
+
+import rx.lang.scala._
+import rx.schedulers.AkkaScheduler
+
+import scala.concurrent.duration._
+
+import RxActor._
+
+object Main extends App {
+  val system = ActorSystem("demo")
+
+  implicit val timeout = Timeout(10 seconds) // for waiting for the Done message
+  import system.dispatcher
+
+  val rxContext = system.actorOf(Props[RxActor], "rx-context")
+  rxContext ! Start
+  rxContext ? Schedule onComplete (_ => system.shutdown())
+}
+
+object RxActor {
+  sealed trait Message
+  case object Start extends Message
+  case object Schedule extends Message
+  case object Done extends Message
+}
+
+class RxActor extends Actor with ActorLogging {
+  def receive: Receive = {
+    case Start =>
+      log info "Starting..."
+      val scheduler = AkkaScheduler forParentWithName (context, "rx-scheduler")
+      context become scheduling(scheduler)
+  }
+
+  def scheduling(scheduler: AkkaScheduler): Receive = {
+    case Schedule =>
+      log info "Scheduling..."
+      val ref = sender
+      val observable = Observable interval (1 second, Scheduler(scheduler)) take 5
+      observable subscribe (
+        onNext = (tick: Long) => log info s"Tick: $tick",
+        onError = (e: Throwable) => log error s"Uh-oh: $e",
+        onCompleted = () => ref ! Done)
+  }
+}
+```
+
 ## Building
 
 This build uses *[sbt](http://scala-sbt.org)*.
