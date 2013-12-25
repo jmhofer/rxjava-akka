@@ -15,23 +15,43 @@
  */
 package rx.schedulers
 
-import akka.actor.{Cancellable, Props, ActorSystem}
+import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import rx.Scheduler
 import rx.Subscription
+import rx.schedulers.actor.SchedulerActor
+import rx.schedulers.actor.SchedulerActor._
 import rx.subscriptions.Subscriptions
 import rx.util.functions.Action0
-
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
-import rx.schedulers.actor.SchedulerActor
-import SchedulerActor._
+/** Provides RxJava schedulers which schedule actions in an akka actor.
+  * This actor is created in the given context (which may be an actor system or a parent actor context).
+  * The scheduler has to be explicitly shut down after usage in order for the internally used actor to stop.
+  */
+object AkkaScheduler {
+  def forParent(parent: ActorRefFactory): AkkaScheduler = new AkkaScheduler(parent)
 
-// TODO make this also work within parent actor context (instead of actor system context)
-// TODO error handling?
-class AkkaScheduler(context: ActorSystem, actorName: Option[String] = None, timeout: FiniteDuration = 1.second) extends Scheduler {
+  def forParentWithName(parent: ActorRefFactory, name: String): AkkaScheduler = new AkkaScheduler(parent, Some(name))
+
+  def forParentWithTimeout(parent: ActorRefFactory, timeout: FiniteDuration): AkkaScheduler =
+    new AkkaScheduler(parent, timeout = timeout)
+
+  def forParentWithTimeout(parent: ActorRefFactory, timeout: Long, unit: TimeUnit): AkkaScheduler =
+    new AkkaScheduler(parent, timeout = Duration(timeout, unit))
+
+  def forParentWithNameAndTimeout(parent: ActorRefFactory, name: String, timeout: FiniteDuration): AkkaScheduler =
+    new AkkaScheduler(parent, Some(name), timeout)
+
+  def forParentWithNameAndTimeout(parent: ActorRefFactory, name: String, timeout: Long, unit: TimeUnit): AkkaScheduler =
+    new AkkaScheduler(parent, Some(name), Duration(timeout, unit))
+}
+
+class AkkaScheduler(context: ActorRefFactory,
+                    actorName: Option[String] = None,
+                    timeout: FiniteDuration = 1.second) extends Scheduler {
 
   val actor = actorName
     .map (context.actorOf(Props(classOf[SchedulerActor], this), _))
