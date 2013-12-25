@@ -33,6 +33,8 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
   Immediate scheduling a simple task should execute that task immediately,   ${akka().e1}
     even when immediately unsubscribing.                                     ${akka().e2}
 
+  Scheduling multiple tasks at once should not execute them concurrently.    ${akka().e13}
+
   Delayed scheduling without delay should execute immediately,               ${akka().e3}
     even when immediately unsubscribing.                                     ${akka().e4}
 
@@ -44,11 +46,9 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
   Periodic scheduling should
     not execute before the initial delay,                                    ${akka().e8}
     execute after that delay,                                                ${akka().e9}
-      but not when immediately unsubscribing.                                ${akka().e10}
+      but not when immediately unsubscribing,                                ${akka().e10}
     execute repeatedly as expected,                                          ${akka().e11}
       but not anymore after unsubscribing.                                   ${akka().e12}
-
-  Scheduling multiple tasks at once should not execute them concurrently.    ${akka().e13}
 """
 
   case class akka() extends TestKit(ActorSystem()) with After with Scheduling with Immediate with Delayed with Periodic {
@@ -67,6 +67,15 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
     def e2 = this {
       withSubscription(scheduler schedule pingAction) {}
       testActor should receive(veryQuickly)("ping")
+    }
+
+    def e13 = this {
+      withSubscription(scheduler schedule longRunningAction) {
+        withSubscription(scheduler schedule pingAction) {
+          testActor should receive(quickly)("long") and
+            (testActor should receive(veryQuickly)("ping"))
+        }
+      }
     }
   }
 
@@ -120,8 +129,6 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
 
     def e11 = this { todo }
     def e12 = this { todo }
-
-    def e13 = this { todo }
   }
 
   trait Scheduling { _: TestKit =>
@@ -130,6 +137,10 @@ class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s
 
     val scheduler = new AkkaScheduler(system, Some("test"))
     val pingAction = () => testActor ! "ping"
+    val longRunningAction = () => {
+      Thread sleep 50
+      testActor ! "long"
+    }
 
     def receive(patience: Duration): AnyRef => Matcher[ActorRef] = beSome(_) ^^ { (_: ActorRef) =>
       Option(receiveOne(patience)) // wtf, this thing seriously returns null
