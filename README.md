@@ -10,29 +10,32 @@ This module is published on *[Bintray](https://bintray.com/)*.
 
 This is how you declare the Bintray resolver and add the dependency on `rxjava-akka` for [sbt](http://scala-sbt.org):
 
-    ```Scala
-    resolvers += "bintray-jmhofer" at "http://dl.bintray.com/jmhofer/maven"
+```Scala
+resolvers += "bintray-jmhofer" at "http://dl.bintray.com/jmhofer/maven"
 
-    libraryDependencies += "de.johoop" %% "rxjava-akka" % "1.0.0"
+libraryDependencies += "de.johoop" %% "rxjava-akka" % "1.0.0"
+```
 
 ### Maven
 
 Add the repository to Maven:
 
-    ```XML
-    <repository>
-      <id>bintray-jmhofer</id>
-      <url>http://dl.bintray.com/jmhofer/maven</url>
-    </repository>
+```XML
+<repository>
+  <id>bintray-jmhofer</id>
+  <url>http://dl.bintray.com/jmhofer/maven</url>
+</repository>
+```
 
 Resolve the library:
 
-    ```XML
-    <dependency>
-      <groupId>de.johoop</groupId>
-      <artifactId>rxjava-akka_2.10</artifactId>
-      <version>1.0.0</version>
-    </dependency>
+```XML
+<dependency>
+  <groupId>de.johoop</groupId>
+  <artifactId>rxjava-akka_2.10</artifactId>
+  <version>1.0.0</version>
+ </dependency>
+```
 
 ## Usage
 
