@@ -13,7 +13,7 @@ This is how you declare the Bintray resolver and add the dependency on `rxjava-a
 ```Scala
 resolvers += "bintray-jmhofer" at "http://dl.bintray.com/jmhofer/maven"
 
-libraryDependencies += "de.johoop" %% "rxjava-akka" % "1.0.0"
+libraryDependencies += "de.johoop" %% "rxjava-akka" % "1.1.0"
 ```
 
 ### Maven
