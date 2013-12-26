@@ -2,7 +2,7 @@ organization := "de.johoop"
 
 name := "rxjava-akka"
 
-version := "1.1.0"
+version := "1.1.1-SNAPSHOT"
 
 scalaVersion := "2.10.3"
 
