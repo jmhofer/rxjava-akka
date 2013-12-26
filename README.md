@@ -1,6 +1,6 @@
 # rxjava-akka
 
-Attempt at a bridge from *[RxJava]()* to *[Akka]()* and vice versa.
+Attempt at a bridge from *[RxJava](https://github.com/Netflix/RxJava)* to *[Akka](http://akka.io)* and vice versa.
 
 ## Dependency
 
