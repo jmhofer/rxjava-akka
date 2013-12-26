@@ -13,6 +13,7 @@ libraryDependencies ++= Seq(
 	"com.netflix.rxjava" % "rxjava-scala" % "0.15.1",
 	"com.typesafe.akka" %% "akka-actor" % "2.2.3",
   "com.typesafe.akka" %% "akka-testkit" % "2.2.3",
-  "org.specs2" %% "specs2" % "2.3.6" % "test")
+  "org.specs2" %% "specs2" % "2.3.6" % "test",
+  "org.mockito" % "mockito-core" % "1.9.5" % "test")
 
 scalacOptions ++= Seq("-language:_", "-deprecation")

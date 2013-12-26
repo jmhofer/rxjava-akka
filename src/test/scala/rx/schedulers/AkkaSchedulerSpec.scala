@@ -28,7 +28,7 @@ import rx.Subscription
 
 
 class AkkaSchedulerSpec extends Specification with NoTimeConversions {def is = s2"""$sequential
-  ${"Akka actor scheduler for RxJava".title}
+  ${"Akka Actor Scheduler for RxJava".title}
 
   Immediate scheduling a simple task should execute that task immediately,   ${akka().e1}
     even when immediately unsubscribing.                                     ${akka().e2}
