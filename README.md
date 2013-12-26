@@ -109,7 +109,45 @@ class RxActor extends Actor with ActorLogging {
 #### Sample Code
 
 ```Scala
-   // TODO
+import akka.actor.{Props, ActorLogging, Actor, ActorSystem}
+
+import rx.lang.scala._
+import rx.observables.AkkaObservables
+
+import RxActor._
+
+object Main extends App {
+  val system = ActorSystem("demo")
+  val rxContext = system.actorOf(Props[RxActor], "rx-context")
+  Seq(Start, Publish) foreach (rxContext !)
+}
+
+object RxActor {
+  sealed trait Message
+  case class Tick(value: Int) extends Message
+  case object Start extends Message
+  case object Publish extends Message
+}
+
+class RxActor extends Actor with ActorLogging {
+  def receive: Receive = {
+    case Start =>
+      log info "Starting..."
+      val observable = AkkaObservables.fromEventStream[Tick](context.system, parent = Some(context))
+      context become publishingTo(observable)
+  }
+
+  def publishingTo(observable: Observable[Tick]): Receive = {
+    case Publish =>
+      log info "Publishing..."
+      observable take 5 subscribe (
+        onNext = (tick: Tick) => log info tick.toString,
+        onError = (t: Throwable) => log error s"oops: $t",
+        onCompleted = () => context.system.shutdown())
+
+      1 to 10 map Tick foreach context.system.eventStream.publish
+  }
+}
 ```
 
 ## Building
