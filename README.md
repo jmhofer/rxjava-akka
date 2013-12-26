@@ -47,7 +47,7 @@ directly, or the context of another actor (recommended).
 
 The context will act as parent to the created actor. You can supervise it from there in order to handle errors.
 
-### Sample
+#### Sample Code
 
 Here's a simple usage sample application (in Scala, although the scheduler works from Java, too):
 
@@ -100,6 +100,16 @@ class RxActor extends Actor with ActorLogging {
         onCompleted = () => ref ! Done)
   }
 }
+```
+
+### Event Stream Observables
+
+`AkkaObservables` allows for easy creation of observables from the Akka `EventStream`.
+
+#### Sample Code
+
+```Scala
+   // TODO
 ```
 
 ## Building
